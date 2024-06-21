@@ -1,0 +1,166 @@
+import mysql.connector  # Importa o conector MySQL
+
+
+class Cliente:
+    def __init__(self, nome, telefone, email):
+        self.nome = nome  # Atribui o nome do cliente
+        self.telefone = telefone  # Atribui o telefone do cliente
+        self.email = email  # Atribui o email do cliente
+
+
+class SistemaCRM:
+    def __init__(self):
+        self.conexao = mysql.connector.connect(  # Estabelece a conexão com o banco de dados MySQL
+            host="localhost",  # Endereço do host do banco de dados
+            user="root",  # Nome de usuário do banco de dados
+            password="he182555@",  # Senha do banco de dados
+            database="crm_db"  # Nome do banco de dados
+        )
+        self.cursor = self.conexao.cursor()  # Cria um cursor para executar comandos SQL
+
+        # Cria as tabelas no banco de dados se ainda não existirem
+        # self.criar_tabelas()
+
+    def adicionar_cliente(self, cliente):
+        # Insere um novo cliente na tabela clientes
+        sql = "INSERT INTO clientes (nome, telefone, email) VALUES (%s, %s, %s)"
+        valores = (cliente.nome, cliente.telefone, cliente.email)
+        self.cursor.execute(sql, valores)
+        self.conexao.commit()  # Confirma a transação no banco de dados
+        print('Cliente adicionado com sucesso.')  # Exibe mensagem de sucesso
+
+    def listar_clientes(self):
+        # Lista todos os clientes cadastrados na tabela clientes
+        self.cursor.execute("SELECT nome, telefone, email FROM clientes")
+        clientes = self.cursor.fetchall()  # Obtém todos os registros
+        for cliente in clientes:
+            print(f"Nome: {cliente[0]}, Telefone: {cliente[1]}, Email: {cliente[2]}")  # Exibe os dados de cada cliente
+
+    def registrar_interacao(self, cliente, tipo_interacao, descricao):
+        # Registra uma interação de um cliente na tabela interacoes
+        sql = "INSERT INTO interacoes (cliente_id, tipo_interacao, descricao) VALUES (%s, %s, %s)"
+        cliente_id = self.buscar_cliente_id(cliente)  # Obtém o ID do cliente
+        if cliente_id:
+            valores = (cliente_id, tipo_interacao, descricao)
+            self.cursor.execute(sql, valores)
+            self.conexao.commit()  # Confirma a transação no banco de dados
+            print('Interação registrada com sucesso.')  # Exibe mensagem de sucesso
+        else:
+            print('Cliente não encontrado.')  # Exibe mensagem se o cliente não for encontrado
+
+    def buscar_cliente_id(self, cliente):
+        # Busca o ID de um cliente na tabela clientes pelo nome
+        sql = "SELECT id FROM clientes WHERE nome = %s"
+        self.cursor.execute(sql, (cliente.nome,))
+        resultado = self.cursor.fetchone()  # Obtém o primeiro resultado da consulta
+        if resultado:
+            return resultado[0]  # Retorna o ID do cliente se encontrado
+        else:
+            return None  # Retorna None se o cliente não for encontrado
+
+    def listar_interacoes(self, cliente):
+        # Lista todas as interações registradas para um cliente específico na tabela interacoes
+        sql = """
+            SELECT tipo_interacao, descricao, data_interacao
+            FROM interacoes
+            WHERE cliente_id = %s
+        """
+        cliente_id = self.buscar_cliente_id(cliente)  # Obtém o ID do cliente
+        if cliente_id:
+            self.cursor.execute(sql, (cliente_id,))
+            interacoes = self.cursor.fetchall()  # Obtém todos os registros de interações
+            for interacao in interacoes:
+                print(f"Tipo: {interacao[0]}, Descrição: {interacao[1]}, Data: {interacao[2]}")  # Exibe os dados de cada interação
+        else:
+            print('Cliente não encontrado.')  # Exibe mensagem se o cliente não for encontrado
+
+    def adicionar_oportunidade_venda(self, cliente, descricao, valor):
+        # Adiciona uma oportunidade de venda para um cliente na tabela oportunidades_venda
+        sql = "INSERT INTO oportunidades_venda (cliente_id, descricao, valor) VALUES (%s, %s, %s)"
+        cliente_id = self.buscar_cliente_id(cliente)  # Obtém o ID do cliente
+        if cliente_id:
+            valores = (cliente_id, descricao, valor)
+            self.cursor.execute(sql, valores)
+            self.conexao.commit()  # Confirma a transação no banco de dados
+            print('Oportunidade de venda adicionada com sucesso.')  # Exibe mensagem de sucesso
+        else:
+            print('Cliente não encontrado.')  # Exibe mensagem se o cliente não for encontrado
+
+    def listar_oportunidades_venda(self, cliente):
+        # Lista todas as oportunidades de venda registradas para um cliente específico na tabela oportunidades_venda
+        sql = """
+            SELECT descricao, valor, data_criacao
+            FROM oportunidades_venda
+            WHERE cliente_id = %s
+        """
+        cliente_id = self.buscar_cliente_id(cliente)  # Obtém o ID do cliente
+        if cliente_id:
+            self.cursor.execute(sql, (cliente_id,))
+            oportunidades = self.cursor.fetchall()  # Obtém todos os registros de oportunidades de venda
+            for oportunidade in oportunidades:
+                print(f"Descrição: {oportunidade[0]}, Valor: R${oportunidade[1]}, Data: {oportunidade[2]}")  # Exibe os dados de cada oportunidade
+        else:
+            print('Cliente não encontrado.')  # Exibe mensagem se o cliente não for encontrado
+
+    def fechar_conexao(self):
+        # Fecha o cursor e a conexão com o banco de dados
+        self.cursor.close()
+        self.conexao.close()
+
+
+# Função para exibir o menu e interagir com o sistema
+def menu_principal():
+    sistema = SistemaCRM()  # Instancia o sistema de CRM
+
+    while True:
+        print("\n=== Menu Principal ===")
+        print("1. Adicionar Cliente")
+        print("2. Listar Clientes")
+        print("3. Registrar Interação")
+        print("4. Listar Interações de Cliente")
+        print("5. Adicionar Oportunidade de Venda")
+        print("6. Listar Oportunidades de Venda de Cliente")
+        print("0. Sair")
+
+        escolha = input("Escolha uma opção: ")  # Solicita a escolha de uma opção ao usuário
+
+        if escolha == '1':
+            nome = input("Nome do cliente: ")  # Solicita o nome do cliente
+            telefone = input("Telefone: ")  # Solicita o telefone do cliente
+            email = input("Email: ")  # Solicita o email do cliente
+            cliente = Cliente(nome, telefone, email)  # Cria um objeto Cliente com as informações fornecidas
+            sistema.adicionar_cliente(cliente)  # Adiciona o cliente ao sistema
+        elif escolha == '2':
+            print("\nListando Clientes:")  # Exibe título para listar clientes
+            sistema.listar_clientes()  # Lista todos os clientes cadastrados
+        elif escolha == '3':
+            nome_cliente = input("Nome do cliente: ")  # Solicita o nome do cliente
+            tipo_interacao = input("Tipo de interação: ")  # Solicita o tipo de interação
+            descricao = input("Descrição da interação: ")  # Solicita a descrição da interação
+            cliente = Cliente(nome_cliente, '', '')  # Cria um objeto Cliente apenas com o nome
+            sistema.registrar_interacao(cliente, tipo_interacao, descricao)  # Registra a interação do cliente
+        elif escolha == '4':
+            nome_cliente = input("Nome do cliente: ")  # Solicita o nome do cliente
+            cliente = Cliente(nome_cliente, '', '')  # Cria um objeto Cliente apenas com o nome
+            sistema.listar_interacoes(cliente)  # Lista as interações registradas para o cliente
+        elif escolha == '5':
+            nome_cliente = input("Nome do cliente: ")  # Solicita o nome do cliente
+            descricao = input("Descrição da oportunidade de venda: ")  # Solicita a descrição da oportunidade de venda
+            valor = float(input("Valor da oportunidade: "))  # Solicita o valor da oportunidade de venda
+            cliente = Cliente(nome_cliente, '', '')  # Cria um objeto Cliente apenas com o nome
+            sistema.adicionar_oportunidade_venda(cliente, descricao, valor)  # Adiciona a oportunidade de venda para o cliente
+        elif escolha == '6':
+            nome_cliente = input("Nome do cliente: ")  # Solicita o nome do cliente
+            cliente = Cliente(nome_cliente, '', '')  # Cria um objeto Cliente apenas com o nome
+            sistema.listar_oportunidades_venda(cliente)  # Lista as oportunidades de venda registradas para o cliente
+        elif escolha == '0':
+            sistema.fechar_conexao()  # Fecha a conexão com o banco de dados
+            print("Sistema encerrado.")  # Exibe mensagem de encerramento
+            break  # Sai do loop
+        else:
+            print("Opção inválida. Escolha novamente.")  # Exibe mensagem se a opção escolhida for inválida
+
+
+# Executa o menu principal se este arquivo for o programa principal
+if __name__ == "__main__":
+    menu_principal()
